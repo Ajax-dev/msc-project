@@ -5,7 +5,7 @@
 Making use of several pieces of software, currently:
 - Ubuntu (22.04) OS
 - Microsoft Visual Studio Code
-- Python 3.10.4
+- Python 3.10.4 (may need to change to 3.9 due to issue with eventlet.wsgi 'ALREADY_HANDLED')
 - Mininet
 
 Datasets:
