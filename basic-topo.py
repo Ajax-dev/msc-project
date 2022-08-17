@@ -17,7 +17,7 @@ def customNetwork():
     # topo defaults to none which is mininmal
     # ipBase is /4 as testing with 4 hosts
     # switch is OVSKernelSwitch, default switch class
-    c0 = RemoteController('c0', ip='127.0.0.1', port = 6653)
+    c0 = RemoteController('c0', ip='127.0.0.1', port = 6633)
     network = Mininet(ipBase='10.0.0.0/4', switch= OVSKernelSwitch, topo=None, build=False, controller=c0)
 
 
