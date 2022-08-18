@@ -28,6 +28,13 @@ __maintainer__ = "Alex Jones"
 __email__ = "ajwilt97@gmail.com"
 __status__ = "Production"
 
+def main():
+    RC = RyuController()
+    RC.__init__()
+
+if __name__ == "__main__":
+    main()
+
 class RyuController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_5.OFP_VERSION]
 
@@ -54,11 +61,108 @@ class RyuController(app_manager.RyuApp):
 
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCL_NO_BUFFER)]
+        self.send_flow_mod(datapath, 0, match, actions)
+
+    # adding a new flow to the switch, effectively just a rule
+    #   the priority is the packet matching the highest and then using the action to be dealt with
+    #   match is setting of the condition
+    # https://ryu.readthedocs.io/en/latest/ofproto_v1_5_ref.html?highlight=OFPFlowMod#ryu.ofproto.ofproto_v1_5_parser.OFPFlowMod 
+
+    def send_flow_mod(self, datapath, priority, match, actions, buffer_id=None, idle=0, hard=0):
+        ofp = datapath.ofproto
+        ofp_parser = datapath.ofproto_parser
+
+        inst = [ofp_parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, actions)]
+
+        if buffer_id:
+            flow_mod = ofp_parser.OFPFlowMod(
+                datapath=datapath, 
+                buffer_id=buffer_id,
+                idle_timeout = idle,
+                hard_timeout = hard,
+                priority = priority,
+                match = match,
+                instructions = inst
+            )
+        else:
+            flow_mod = ofp_parser.OFPFlowMod(
+                datapath=datapath, 
+                idle_timeout = idle,
+                hard_timeout = hard,
+                priority = priority,
+                match = match,
+                instructions = inst
+            )
+        datapath.send_msg(flow_mod)
+
+    # send packet out not necessary right now
 
 
-def main():
-    RC = RyuController()
-    RC.__init__()
+    # Event handler for packet sent to the controller from the switch
+    #   dp: datapath
+    @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
+    def _packet_in_handler(self,ev):
+        msg = ev.msg
+        dp = msg.datapath
+        ofp = dp.ofproto
+        ofp_parser = dp.ofproto_parser
 
-if __name__ == "__main__":
-    main()
+        # get received port num from packet_in msg
+        in_port = msg.match['in_port']
+
+
+        # Analyse packets received wth packet lib
+        pkt = packet.Packet(msg.data)
+        eth_pkt = pkt.get_protocols(ethernet.ethernet)[0]
+        dst = eth_pkt.dst
+        src = eth_pkt.src
+
+        if eth_pkt.ethertype == ether_types.ETH_TYPE_LLDP:
+            #ignore this packet
+            return
+        
+        # get DatapathID to identify the switches in OpenFlow
+        dpid = dp.id
+        self.mac_to_port.setdefault(dpid,{})
+
+        self.logger.info("Packet in %s %s %s %s", dpid, src, dst, in_port)
+        
+        # Learn particular MAC address to avoid attack next time
+        self.mac_to_port[dpid][src] = in_port
+
+        # if destination mac address is learned
+        # decide which port to output packet, otherwise FLOOD all ports
+
+        if dst not in self.mac_to_port[dpid]:
+            out_port = ofp.OFPP_FLOOD
+        else:
+            out_port = self.mac_to_port[dpid][dst]
+
+        # OFPctionOutput used with packet_out message to specify switch port you want to send packet from
+        #   Uses OFPP_FLOOD flag to indicate packet should be sent on all ports
+        # construct actions list
+        actions = [ofp_parser.OFPActionOutput(out_port)]
+
+        # install flow to avoid packet_in
+        if out_port != ofp.OFPP_FLOOD:
+            
+            # check the IP Protocol and create IP match
+            if eth_pkt.ethertype == ether_types.ETH_TYPE_IP:
+                ip = pkt.get_protocol(ipv4.ipv4)
+                src_ip = ip.src
+                dst_ip = ip.dst
+                protocol = ip.protocol
+
+                # IP TCP Protocol
+                if protocol == in_proto.IPPROTO_TCP:
+                
+                # IP UDP Protocol
+                if protocol == in_proto.IPPROTO_UDP:
+                
+                # IP ICMP Protocol
+                if protocol == in_proto.IPPROTO_ICMP:
+
+
+
+
+        dp.send_msg(out)

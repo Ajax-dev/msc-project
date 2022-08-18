@@ -11,3 +11,8 @@ Making use of several pieces of software, currently:
 Datasets:
 - First dataset taken from (dataset-small.csv): https://www.researchgate.net/publication/324716038_SOFTWARE-DEFINED_SECURITY 
 - Second dataset taken from (dataset-large.csv): https://github.com/dz43developer/sdn-network-ddos-detection-using-machine-learning 
+
+
+Some additional notes:
+- Dependencies are saved in requirements.txt
+- Made use of a venv in this project 
