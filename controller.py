@@ -155,13 +155,15 @@ class RyuController(app_manager.RyuApp):
 
                 # IP TCP Protocol
                 if protocol == in_proto.IPPROTO_TCP:
-                
+                    return
+
                 # IP UDP Protocol
-                if protocol == in_proto.IPPROTO_UDP:
+                elif protocol == in_proto.IPPROTO_UDP:
+                    return
                 
                 # IP ICMP Protocol
-                if protocol == in_proto.IPPROTO_ICMP:
-
+                elif protocol == in_proto.IPPROTO_ICMP:
+                    return
 
 
 
