@@ -34,6 +34,7 @@ class RyuController(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(RyuController, self).__init__(*args,**kwargs)
         self.mac_to_port = {}
+        print("made it to the initialisation")
 
     # Decorated event handler effectively, see docs above, openflow protocol api and then the related messages and structures version
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -53,3 +54,11 @@ class RyuController(app_manager.RyuApp):
 
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCL_NO_BUFFER)]
+
+
+def main():
+    RC = RyuController()
+    RC.__init__()
+
+if __name__ == "__main__":
+    main()
