@@ -28,12 +28,6 @@ __maintainer__ = "Alex Jones"
 __email__ = "ajwilt97@gmail.com"
 __status__ = "Production"
 
-def main():
-    RC = RyuController()
-    RC.__init__()
-
-if __name__ == "__main__":
-    main()
 
 class RyuController(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_5.OFP_VERSION]
@@ -42,6 +36,7 @@ class RyuController(app_manager.RyuApp):
         super(RyuController, self).__init__(*args,**kwargs)
         self.mac_to_port = {}
         print("made it to the initialisation")
+
 
     # Decorated event handler effectively, see docs above, openflow protocol api and then the related messages and structures version
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -110,7 +105,6 @@ class RyuController(app_manager.RyuApp):
         # get received port num from packet_in msg
         in_port = msg.match['in_port']
 
-
         # Analyse packets received wth packet lib
         pkt = packet.Packet(msg.data)
         eth_pkt = pkt.get_protocols(ethernet.ethernet)[0]
@@ -166,5 +160,24 @@ class RyuController(app_manager.RyuApp):
                     return
 
 
+            match = ofp_parser.OFPMatch(in_port=in_port, eth_dst=dst)
+            self.send_flow_mod(dp, 1, match, actions)
+
+        # construct packet_out msg and send
+        out = ofp_parser.OFPPacketOut(
+            datapath = dp,
+            buffer_id = ofp.OFP_NO_BUFFER,
+            in_port = in_port,
+            actions = actions,
+            data = msg.data
+        )
+
 
         dp.send_msg(out)
+
+def main():
+    RC = RyuController()
+    RC.__init__()
+
+if __name__ == "__main__":
+    main()
