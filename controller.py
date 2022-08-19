@@ -43,19 +43,19 @@ class RyuController(app_manager.RyuApp):
     def switch_features_handler(self,ev):
         msg = ev.msg
 
-        self.logger.debug(
-            'OFPSwitchFeatures received: '
-            'datapath_id=0x%016x n_buffers=%d '
-            'n_tables=%d auxiliary_id=%d '
-            'capabilities=0x%08x',
-            msg.datapath_id, msg.n_buffers, msg._tables, msg.auxiliary_id, msg.capabilities
-        )
+        # self.logger.debug(
+        #     'OFPSwitchFeatures received: '
+        #     'datapath_id=0x%016x n_buffers=%d '
+        #     'n_tables=%d auxiliary_id=%d '
+        #     'capabilities=0x%08x',
+        #     msg.datapath_id, msg.n_buffers, msg._tables, msg.auxiliary_id, msg.capabilities
+        # )
         datapath = msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
         match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCL_NO_BUFFER)]
+        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCML_NO_BUFFER)]
         self.send_flow_mod(datapath, 0, match, actions)
 
     # adding a new flow to the switch, effectively just a rule
@@ -102,24 +102,24 @@ class RyuController(app_manager.RyuApp):
         ofp = dp.ofproto
         ofp_parser = dp.ofproto_parser
 
-        # get received port num from packet_in msg
-        in_port = msg.match['in_port']
-
+        # get DatapathID to identify the switches in OpenFlow
+        dpid = dp.id
+        self.mac_to_port.setdefault(dpid,{})
+    
         # Analyse packets received wth packet lib
         pkt = packet.Packet(msg.data)
         eth_pkt = pkt.get_protocols(ethernet.ethernet)[0]
         dst = eth_pkt.dst
         src = eth_pkt.src
 
+        # get received port num from packet_in msg
+        in_port = msg.match['in_port']
+
+        self.logger.info("Packet in %s %s %s %s", dpid, src, dst, in_port)
+
         if eth_pkt.ethertype == ether_types.ETH_TYPE_LLDP:
             #ignore this packet
             return
-        
-        # get DatapathID to identify the switches in OpenFlow
-        dpid = dp.id
-        self.mac_to_port.setdefault(dpid,{})
-
-        self.logger.info("Packet in %s %s %s %s", dpid, src, dst, in_port)
         
         # Learn particular MAC address to avoid attack next time
         self.mac_to_port[dpid][src] = in_port
@@ -127,10 +127,11 @@ class RyuController(app_manager.RyuApp):
         # if destination mac address is learned
         # decide which port to output packet, otherwise FLOOD all ports
 
-        if dst not in self.mac_to_port[dpid]:
-            out_port = ofp.OFPP_FLOOD
-        else:
-            out_port = self.mac_to_port[dpid][dst]
+        out_port = self.mac_to_port[dpid][dst] if dst in self.mac_to_port[dpid] else ofp.OFPP_FLOOD
+        # if dst in self.mac_to_port[dpid]:
+        #     out_port = self.mac_to_port[dpid][dst]
+        # else:
+        #     out_port = ofp.OFPP_FLOOD
 
         # OFPctionOutput used with packet_out message to specify switch port you want to send packet from
         #   Uses OFPP_FLOOD flag to indicate packet should be sent on all ports
@@ -141,35 +142,43 @@ class RyuController(app_manager.RyuApp):
         if out_port != ofp.OFPP_FLOOD:
             
             # check the IP Protocol and create IP match
-            if eth_pkt.ethertype == ether_types.ETH_TYPE_IP:
-                ip = pkt.get_protocol(ipv4.ipv4)
-                src_ip = ip.src
-                dst_ip = ip.dst
-                protocol = ip.protocol
+            # if eth_pkt.ethertype == ether_types.ETH_TYPE_IP:
+            #     ip = pkt.get_protocol(ipv4.ipv4)
+            #     src_ip = ip.src
+            #     dst_ip = ip.dst
+            #     protocol = ip.protocol
 
-                # IP TCP Protocol
-                if protocol == in_proto.IPPROTO_TCP:
-                    return
+            #     # IP TCP Protocol
+            #     if protocol == in_proto.IPPROTO_TCP:
+            #         return
 
-                # IP UDP Protocol
-                elif protocol == in_proto.IPPROTO_UDP:
-                    return
+            #     # IP UDP Protocol
+            #     elif protocol == in_proto.IPPROTO_UDP:
+            #         return
                 
-                # IP ICMP Protocol
-                elif protocol == in_proto.IPPROTO_ICMP:
-                    return
+            #     # IP ICMP Protocol
+            #     elif protocol == in_proto.IPPROTO_ICMP:
+            #         return
 
 
             match = ofp_parser.OFPMatch(in_port=in_port, eth_dst=dst)
             self.send_flow_mod(dp, 1, match, actions)
 
+        self.logger.debug(
+            'OFPPacketIn received: '
+            'buffer_id=%x total_len=%d '
+            'table_id=%d cookie=%d match=%s',
+            msg.buffer_id, msg.total_len,
+            msg.table_id, msg.cookie, msg.match
+        )
         # construct packet_out msg and send
         out = ofp_parser.OFPPacketOut(
             datapath = dp,
             buffer_id = ofp.OFP_NO_BUFFER,
-            in_port = in_port,
+            # in_port = in_port,
+            match=ofp_parser.OFPMatch(in_port=in_port),
             actions = actions,
-            data = msg.data
+            # data = msg.data
         )
 
 
