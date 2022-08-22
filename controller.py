@@ -56,14 +56,14 @@ class RyuController(app_manager.RyuApp):
 
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCML_NO_BUFFER)]
-        self.send_flow_mod(datapath, 0, match, actions)
+        self.add_flow(datapath, 0, match, actions)
 
     # adding a new flow to the switch, effectively just a rule
     #   the priority is the packet matching the highest and then using the action to be dealt with
     #   match is setting of the condition
     # https://ryu.readthedocs.io/en/latest/ofproto_v1_5_ref.html?highlight=OFPFlowMod#ryu.ofproto.ofproto_v1_5_parser.OFPFlowMod 
 
-    def send_flow_mod(self, datapath, priority, match, actions, buffer_id=None, idle=0, hard=0):
+    def add_flow(self, datapath, priority, match, actions, buffer_id=None, idle=0, hard=0):
         ofp = datapath.ofproto
         ofp_parser = datapath.ofproto_parser
 
@@ -162,7 +162,7 @@ class RyuController(app_manager.RyuApp):
 
 
             match = ofp_parser.OFPMatch(in_port=in_port, eth_dst=dst)
-            self.send_flow_mod(dp, 1, match, actions)
+            self.add_flow(dp, 1, match, actions)
 
         self.logger.debug(
             'OFPPacketIn received: '
