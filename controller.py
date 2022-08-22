@@ -171,6 +171,11 @@ class RyuController(app_manager.RyuApp):
             msg.buffer_id, msg.total_len,
             msg.table_id, msg.cookie, msg.match
         )
+
+        # data = None
+        # if msg.buffer_id == ofp.OFP_NO_BUFFER:
+        #     data = msg.data
+
         # construct packet_out msg and send
         out = ofp_parser.OFPPacketOut(
             datapath = dp,
@@ -178,7 +183,7 @@ class RyuController(app_manager.RyuApp):
             # in_port = in_port,
             match=ofp_parser.OFPMatch(in_port=in_port),
             actions = actions,
-            # data = msg.data
+            data = msg.data
         )
 
 

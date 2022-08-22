@@ -1,5 +1,5 @@
 import os
-#from functools import partial
+from functools import partial
 
 # mininet imports
 from mininet.net import Mininet
@@ -11,27 +11,29 @@ from subprocess import call
 
 def customNetwork():
 
+    OVSSwitch13 = partial(OVSSwitch, protocols='OpenFlow15')
+
     # http://mininet.org/api/classmininet_1_1net_1_1Mininet.html#adbd564d924ef02f12ef73fae3393da83
     # defining the network
     # build set to false so it doesn't build until called
     # topo defaults to none which is mininmal
     # ipBase is /4 as testing with 4 hosts
     # switch is OVSKernelSwitch, default switch class
-    c0 = RemoteController('c0', ip='127.0.0.1', port = 6633)
-    network = Mininet(ipBase='10.0.0.0/4', switch= OVSKernelSwitch, topo=None, build=False, controller=c0)
-
+    # c0 = RemoteController('c0', ip='127.0.0.1', port = 6633)
+    network = Mininet(ipBase='10.0.0.0/4', switch= OVSKernelSwitch, topo=None, build=False)
 
     # adding controller
     # ipBase and port gotten from `sudo mn | dump`, the github link says to use 6633 but doc shows error returned
     info('-------Add controller\n-------')
-    # c0 = network.addController(
-    #     name = 'c0',
-    #     controller = RemoteController,
-    #     ip = '127.0.0.1',
-    #     port = 6653,
-    #     protocol = 'tcp'
-    # )
+    c0 = network.addController(
+        name = 'c0',
+        controller = RemoteController,
+        ip = '127.0.0.1',
+        port = 6653,
+        protocol = 'tcp'
+    )
 
+    
     # adding switches
     info('-------Add the switches\n-------')
     s1 = network.addSwitch('s1', cls=OVSKernelSwitch)
