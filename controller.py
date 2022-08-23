@@ -20,7 +20,8 @@ from ryu.controller import ofp_event
 from ryu.controller.handler import MAIN_DISPATCHER, CONFIG_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_5
-from ryu.lib.packet import packet, ethernet, ether_types, in_proto, ipv4, icmp, tcp, udp
+from ryu.lib.packet import packet, ethernet, ether_types
+from ryu.lib.packet import in_proto, ipv4, icmp, tcp, udp
 
 
 __author__ = "Alex Jones"
@@ -142,27 +143,46 @@ class RyuController(app_manager.RyuApp):
         if out_port != ofp.OFPP_FLOOD:
             
             # check the IP Protocol and create IP match
-            # if eth_pkt.ethertype == ether_types.ETH_TYPE_IP:
-            #     ip = pkt.get_protocol(ipv4.ipv4)
-            #     src_ip = ip.src
-            #     dst_ip = ip.dst
-            #     protocol = ip.protocol
+            if eth_pkt.ethertype == ether_types.ETH_TYPE_IP:
+                ip = pkt.get_protocol(ipv4.ipv4)
+                src_ip = ip.src
+                dst_ip = ip.dst
+                protocol = ip.protocol
 
-            #     # IP TCP Protocol
-            #     if protocol == in_proto.IPPROTO_TCP:
-            #         return
+                # IP TCP Protocol
+                if protocol == in_proto.IPPROTO_TCP:
+                    t = pkt.get_protocol(tcp.tcp)
+                    match = ofp_parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
+                                            ipv4_src=src_ip, ipv4_dst=dst_ip, ip_proto=protocol,
+                                            tcp_src=t.src_port, tcp_dst=t.dst_port,)
 
-            #     # IP UDP Protocol
-            #     elif protocol == in_proto.IPPROTO_UDP:
-            #         return
+                # IP UDP Protocol
+                elif protocol == in_proto.IPPROTO_UDP:
+                    u = pkt.get_protocol(udp.udp)
+                    match = ofp_parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
+                                            ipv4_src=src_ip, ipv4_dst=dst_ip,ip_proto=protocol,
+                                            udp_src=u.src_port, udp_dst=u.dst_port,)
                 
-            #     # IP ICMP Protocol
-            #     elif protocol == in_proto.IPPROTO_ICMP:
-            #         return
+                # IP ICMP Protocol
+                elif protocol == in_proto.IPPROTO_ICMP:
+                    i = pkt.get_protocol(icmp.icmp)
+                    match = ofp_parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
+                                            ipv4_src=src_ip, ipv4_dst=dst_ip,
+                                            ip_proto=protocol,icmpv4_code=i.code,
+                                            icmpv4_type=i.type)
+
 
 
             match = ofp_parser.OFPMatch(in_port=in_port, eth_dst=dst)
             self.add_flow(dp, 1, match, actions)
+
+        # verify if we have a valid buffer_id, if yes avoid to send both
+            # flow_mod & packet_out
+            if msg.buffer_id != ofp.OFP_NO_BUFFER:
+                    self.add_flow(dp, 1, match, actions, msg.buffer_id, idle=20, hard=100)
+                    return
+            else:
+                self.add_flow(dp, 1, match, actions, idle=20, hard=100)
 
         self.logger.debug(
             'OFPPacketIn received: '

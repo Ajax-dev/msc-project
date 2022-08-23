@@ -6,7 +6,8 @@ from mininet.net import Mininet
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 from mininet.link import TCLink, Intf
-from mininet.node import Controller, RemoteController, OVSController, CPULimitedHost, Host, Node, OVSKernelSwitch, UserSwitch, OVSSwitch, IVSSwitch
+from mininet.node import RemoteController, Host, OVSKernelSwitch, OVSSwitch
+from mininet.node import Controller, OVSController, CPULimitedHost, Node, UserSwitch, IVSSwitch
 from subprocess import call
 
 def customNetwork():
