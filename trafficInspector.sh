@@ -27,7 +27,7 @@ do
             state=$(awk '{print $0;}' .result)
         fi
 
-        if [ $state -eq 1];
+        if [ $state -eq 1 ];
         then
             echo "ATTACK ON THE NETWORK AT switch$j"
             #
