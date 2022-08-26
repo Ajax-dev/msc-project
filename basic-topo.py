@@ -29,13 +29,7 @@ def customNetwork():
     # ipBase and port gotten from `sudo mn | dump`, the github link says to use 6633 but doc shows error returned
     network = Mininet(ipBase='10.0.0.0/4', topo=None, build=False)
     info('-------Add controller\n-------')
-    c0 = network.addController(
-        name = 'c0',
-        controller = RemoteController,
-        ip = '127.0.0.1',
-        port = 6633,
-        protocol = 'tcp'
-    )
+    c0 = network.addController('c0', controller = RemoteController, ip = '127.0.0.1', port = 6633, protocol = 'tcp')
 
     # adding switches
     info('-------Add the switches\n-------')
@@ -46,14 +40,14 @@ def customNetwork():
 
     # adding hosts
     info('-------Add the hosts\n-------')
-    # h1 = network.addHost('h1', cls=Host, ip = '10.0.0.1', defaultRoute = None)
-    # h2 = network.addHost('h2', cls=Host, ip = '10.0.0.2', defaultRoute = None)
-    # h3 = network.addHost('h3', cls=Host, ip = '10.0.0.3', defaultRoute = None)
-    # h4 = network.addHost('h4', cls=Host, ip = '10.0.0.4', defaultRoute = None)
-    h1 = network.addHost('h1', cls=Host, ip = '127.0.0.1', defaultRoute = None)
-    h2 = network.addHost('h2', cls=Host, ip = '127.0.0.2', defaultRoute = None)
-    h3 = network.addHost('h3', cls=Host, ip = '127.0.0.3', defaultRoute = None)
-    h4 = network.addHost('h4', cls=Host, ip = '127.0.0.4', defaultRoute = None)
+    h1 = network.addHost('h1', cls=Host, ip = '10.0.0.1', defaultRoute = None)
+    h2 = network.addHost('h2', cls=Host, ip = '10.0.0.2', defaultRoute = None)
+    h3 = network.addHost('h3', cls=Host, ip = '10.0.0.3', defaultRoute = None)
+    h4 = network.addHost('h4', cls=Host, ip = '10.0.0.4', defaultRoute = None)
+    # h1 = network.addHost('h1', cls=Host, ip = '127.0.0.1', defaultRoute = None)
+    # h2 = network.addHost('h2', cls=Host, ip = '127.0.0.2', defaultRoute = None)
+    # h3 = network.addHost('h3', cls=Host, ip = '127.0.0.3', defaultRoute = None)
+    # h4 = network.addHost('h4', cls=Host, ip = '127.0.0.4', defaultRoute = None)
 
     # links for the network
     info('-------Add the links\n-------')
