@@ -52,7 +52,7 @@ class BasicTrafficMonitor(controller.RyuController):
         curTime = datetime.now()
         curTime = curTime.timestamp()
 
-        trackFile = open("data/StatsFile.csv", "a+")
+        trackFile = open("/home/ajax/Coding/msc-project/data/StatsFile.csv", "a+")
 
         # In the body there is
         body = ev.msg.body
