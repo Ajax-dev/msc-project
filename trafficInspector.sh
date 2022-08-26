@@ -17,7 +17,7 @@ do
         # check if there's no traffic currently
         if test -z "$packets" || test -z "$bytes" || test -z "$ipsrc" || test -z "$ipdst"
         then
-            echo "no traffic"
+            # echo "no traffic"
             state=0
         else
             echo "Some traffic"
