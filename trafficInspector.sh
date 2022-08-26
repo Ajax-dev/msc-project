@@ -5,7 +5,7 @@ for i in {1..200}
 do
     for((j = 1; j <= n; j++))
     do
-        echo "Inspection no $i at switch: $j"
+        echo "Inspection no $i at s$j"
         # extract data
         sudo ovs-ofctl dump-flows s$j > data/base
         grep "nw_src" data/base > data/entries.csv
@@ -20,7 +20,12 @@ do
             echo "no traffic"
             state=0
         else
-            
+            echo "Some traffic"
+            echo "$packets" > data/packets.csv
+            echo "$bytes" > data/bytes.csv
+            echo "$ipsrc" > data/ipsrc.csv
+            echo "$ipdst" > data/ipdst.csv
+
             # python3 traffic-monitor.py
             # python3 computation.py
             # python3 check-traffic-svc.py
