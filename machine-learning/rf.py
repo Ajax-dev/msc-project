@@ -3,11 +3,11 @@ from random import random
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler as SC
-from sklearn.svm import SVC 
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import joblib
 
-class SVM():
+class RandomForest():
 
     def __init__(self):
         start = datetime.now()
@@ -27,7 +27,7 @@ class SVM():
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
 
         # Now fitting the SVM with the training set
-        classifier = SVC(kernel='linear', random_state=0)
+        classifier = RandomForestClassifier(n_estimators=10, criterion="entropy", random_state=0)
         model = classifier.fit(X_train, y_train)
 
         # Testing classification
@@ -48,12 +48,16 @@ class SVM():
         print("     Confusion Report        ")
         cr = classification_report(y_test,y_pred)
         print(cr)
+
+        # Save the model
+        filename = 'models/finalised_model_rf.sav'
+        joblib.dump(classifier, filename)
         
 def main():
     start = datetime.now()
 
-    svm = SVM()
-    svm.training()
+    rf = RandomForest()
+    rf.training()
 
     end = datetime.now()
     print("Total time to train: ", (end.microsecond-start.microsecond), " microseconds")
