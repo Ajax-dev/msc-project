@@ -1,23 +1,24 @@
 #!/bin/bash
-echo "Script running..."
 n=4 #number of switches
-for i in {1..200}
+echo "Script running..."
+for i in {1..1000}
 do
     for((j = 1; j <= n; j++))
     do
         echo "Inspection no $i at s$j"
         # extract data
         sudo ovs-ofctl dump-flows s$j > data/base
-        grep "nw_src" data/base > data/entries.csv
-        packets=$(awk -F "," '{split($4,a,"="); print a[2]","}' data/StatsFile.csv)
-        bytes=$(awk -F "," '{split($5,b,"="); print b[2]","}' data/StatsFile.csv)
-        ipsrc=$(awk -F "," '{out=""; for(k=2;k<=NF;k++){out=out" "$k}; print out}' data/StatsFile.csv | awk -F " " '{split($11,d,"="); print d[2]","}')
-        ipdst=$(awk -F "," '{out=""; for(k=2;k<=NF;k++){out=out" "$k}; print out}' data/StatsFile.csv | awk -F " " '{split($12,d,"="); print d[2]","}')
+        grep "nw_src" data/base> data/entries.csv
+        # awk '{print $0}' data/base.csv
+        packets=$(awk -F "," '{split($4,a,"="); print a[2]","}' data/entries.csv)
+        bytes=$(awk -F "," '{split($5,b,"="); print b[2]","}' data/entries.csv)
+        ipsrc=$(awk -F "," '{out=""; for(k=2;k<=NF;k++){out=out" "$k}; print out}' data/entries.csv | awk -F " " '{split($11,d,"="); print d[2]","}')
+        ipdst=$(awk -F "," '{out=""; for(k=2;k<=NF;k++){out=out" "$k}; print out}' data/entries.csv | awk -F " " '{split($12,d,"="); print d[2]","}')
 
         # check if there's no traffic currently
-        if test -z "$packets" || test -z "$bytes" || test -z "$ipsrc" || test -z "$ipdst"
+        if test -z "$packets" || test -z "$bytes" || test -z "$ipsrc" || test -z "$ipdst" 
         then
-            # echo "no traffic"
+            echo "no traffic"
             state=0
         else
             echo "Some traffic"
@@ -27,8 +28,8 @@ do
             echo "$ipdst" > data/ipdst.csv
 
             # python3 traffic-monitor.py
-            # python3 computation.py
-            # python3 check-traffic-svc.py
+            python3 computation.py
+            python3 check-traffic-svc.py
             state=$(awk '{print $0;}' .result)
         fi
 
@@ -36,9 +37,10 @@ do
         then
             echo "ATTACK ON THE NETWORK AT switch$j"
             #
-            default_flow = $(sudo ovs-ofctl dump-flows s$j | tail -n 1) 
-            sudo ovs-ofctl add-flow s$j "$default_flow" 
-            sudo ovs-ofctl del-flows s$j
+            default_flow = $(sudo ovs-ofctl dump-flows s$j | tail -n 1) #gets the flow "action:CONTROLLER:65535" (just the port num of yours basic) sending unknown packet
+            sudo ovs-ofctl del-flows s$j # remove the malicious flow
+            sudo ovs-ofctl add-flow s$j "$default_flow" # re-add it
+            
 
         fi
     done
