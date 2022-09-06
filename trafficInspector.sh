@@ -38,10 +38,8 @@ do
             echo "ATTACK ON THE NETWORK AT switch$j"
             #
             default_flow = $(sudo ovs-ofctl dump-flows s$j | tail -n 1) #gets the flow "action:CONTROLLER:65535" (just the port num of yours basic) sending unknown packet
-            sudo ovs-ofctl del-flows s$j # remove the malicious flow
-            sudo ovs-ofctl add-flow s$j "$default_flow" # re-add it
-            
-
+            sudo ovs-ofctl del-flows s$j
+            sudo ovs-ofctl add-flow s$j "$default_flow"
         fi
     done
     sleep 3

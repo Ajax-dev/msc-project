@@ -56,7 +56,15 @@ with open('data/intflow.csv') as f:
 
 rfip = abs(float(n_ip - row_count_nonint) / n_ip)
 
-headers = ["SSIP", "SDFP", "SDFB", "SFE", "RFIP"]
+## headers from data.csv
+h1 = "SSIP"
+h2 = "Stdevpack"
+h3 = "Stdevbyte"
+h4 = "NbFlow"
+h5 = "NbIntFlow"
+
+# headers = ["SSIP", "SDFP", "SDFB", "SFE", "RFIP"]
+headers = [h1, h2, h3, h4, h5]
 
 features = [ssip, sdfp, sdfb, sfe, rfip]
 
