@@ -56,7 +56,8 @@ class RyuController(app_manager.RyuApp):
         parser = datapath.ofproto_parser
 
         match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCML_NO_BUFFER)]
+        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
+                                        ofproto.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
 
     # adding a new flow to the switch, effectively just a rule
@@ -147,7 +148,7 @@ class RyuController(app_manager.RyuApp):
                 ip = pkt.get_protocol(ipv4.ipv4)
                 src_ip = ip.src
                 dst_ip = ip.dst
-                protocol = ip.protocol
+                protocol = ip.proto
 
                 # IP TCP Protocol
                 if protocol == in_proto.IPPROTO_TCP:
