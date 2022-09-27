@@ -45,7 +45,7 @@ class RandomForest():
         failure = 1.0 - acc
         print("Fail = {0:.2f}%" .format(failure*100))
 
-        print("     Confusion Report        ")
+        print("     Classification Report        ")
         cr = classification_report(y_test,y_pred)
         print(cr)
 
