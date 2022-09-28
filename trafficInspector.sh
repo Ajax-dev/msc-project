@@ -1,5 +1,8 @@
 #!/bin/bash
 n=4 #number of switches
+red=`tput setaf 1` # setting colour variables
+green=`tput setaf 2`
+reset=`tput sgr0`
 echo "Script running..."
 for i in {1..1000}
 do
@@ -21,7 +24,7 @@ do
             echo "no traffic"
             state=0
         else
-            echo "Some traffic"
+            echo "${green}Traffic flowing...${reset}"
             echo "$packets" > data/packets.csv
             echo "$bytes" > data/bytes.csv
             echo "$ipsrc" > data/ipsrc.csv
@@ -35,7 +38,7 @@ do
 
         if [ $state -eq 1 ];
         then
-            echo "ATTACK ON THE NETWORK AT switch$j"
+            echo "${red}ATTACK ON THE NETWORK AT switch$j${reset}"
             #
             default_flow=$(sudo ovs-ofctl dump-flows s$j | tail -n 1) #gets the flow "action:CONTROLLER:65535" (just the port num of yours basic) sending unknown packet
             sudo ovs-ofctl del-flows s$j

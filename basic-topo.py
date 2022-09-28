@@ -29,6 +29,7 @@ def customNetwork():
     # ipBase and port gotten from `sudo mn | dump`, the github link says to use 6633 but doc shows error returned -- 6653 from dump
     network = Mininet(ipBase='10.0.0.0/4', topo=None, build=False)
     info('-------Add controller\n-------')
+    # default transport port was 6633 pre-openflow 1.3.2, 6653 post
     c0 = network.addController('c0', controller = RemoteController, ip = '127.0.0.1', port = 6653, protocol = 'tcp')
 
     # adding switches
