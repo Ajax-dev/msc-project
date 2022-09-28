@@ -19,7 +19,7 @@ from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import MAIN_DISPATCHER, CONFIG_DISPATCHER
 from ryu.controller.handler import set_ev_cls
-from ryu.ofproto import ofproto_v1_5
+from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet, ethernet, ether_types
 from ryu.lib.packet import in_proto, ipv4, icmp, tcp, udp
 
@@ -30,189 +30,193 @@ __email__ = "ajwilt97@gmail.com"
 __status__ = "Production"
 
 
-class RyuController(app_manager.RyuApp):
-    OFP_VERSIONS = [ofproto_v1_5.OFP_VERSION]
+class CustomController(app_manager.RyuApp):
+    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     def __init__(self, *args, **kwargs):
-        super(RyuController, self).__init__(*args,**kwargs)
+        super(CustomController, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
-        print("made it to the initialisation")
-
-
-    # Decorated event handler effectively, see docs above, openflow protocol api and then the related messages and structures version
+    
+    # From simple_switch_13
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
-    def switch_features_handler(self,ev):
-        msg = ev.msg
-
-        # self.logger.debug(
-        #     'OFPSwitchFeatures received: '
-        #     'datapath_id=0x%016x n_buffers=%d '
-        #     'n_tables=%d auxiliary_id=%d '
-        #     'capabilities=0x%08x',
-        #     msg.datapath_id, msg.n_buffers, msg._tables, msg.auxiliary_id, msg.capabilities
-        # )
-        datapath = msg.datapath
+    def switch_features_handler(self, ev):
+        datapath = ev.msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
+        # install table-miss flow entry
+        #
+        # We specify NO BUFFER to max_len of the output action due to
+        # OVS bug. At this moment, if we specify a lesser number, e.g.,
+        # 128, OVS will send Packet-In with invalid buffer_id and
+        # truncated packet data. In that case, we cannot output packets
+        # correctly.  The bug has been fixed in OVS v2.1.0.
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                        ofproto.OFPCML_NO_BUFFER)]
+                                          ofproto.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
 
-    # adding a new flow to the switch, effectively just a rule
-    #   the priority is the packet matching the highest and then using the action to be dealt with
-    #   match is setting of the condition
-    # https://ryu.readthedocs.io/en/latest/ofproto_v1_5_ref.html?highlight=OFPFlowMod#ryu.ofproto.ofproto_v1_5_parser.OFPFlowMod 
+    # add a new flow(rule) to switch.
+    #   priority : the packet will match the highest priority to match, then follw the action to deal with packet.
+    #   match    : set the match condition, ex: 1 = msg.match['in_port']
+    #                                           packet from port 1 will be match.
+    def add_flow(self, datapath, priority, match, actions, buffer_id=None):
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
 
-    def add_flow(self, datapath, priority, match, actions, buffer_id=None, idle=0, hard=0):
-        ofp = datapath.ofproto
-        ofp_parser = datapath.ofproto_parser
-
-        inst = [ofp_parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, actions)]
-
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
+                                             actions)]
         if buffer_id:
-            flow_mod = ofp_parser.OFPFlowMod(
-                datapath=datapath, 
-                buffer_id=buffer_id,
-                idle_timeout = idle,
-                hard_timeout = hard,
-                priority = priority,
-                match = match,
-                instructions = inst
-            )
+            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
+                                    priority=priority, match=match,
+                                    instructions=inst)
         else:
-            flow_mod = ofp_parser.OFPFlowMod(
-                datapath=datapath, 
-                idle_timeout = idle,
-                hard_timeout = hard,
-                priority = priority,
-                match = match,
-                instructions = inst
-            )
-        datapath.send_msg(flow_mod)
+            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
+                                    match=match, instructions=inst)
+        datapath.send_msg(mod)
 
-    # send packet out not necessary right now
-
-
-    # Event handler for packet sent to the controller from the switch
-    #   dp: datapath
-    @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
-    def _packet_in_handler(self,ev):
-        msg = ev.msg
-        dp = msg.datapath
-        ofp = dp.ofproto
-        ofp_parser = dp.ofproto_parser
-
-        # get DatapathID to identify the switches in OpenFlow
-        dpid = dp.id
-        self.mac_to_port.setdefault(dpid,{})
     
-        # Analyse packets received wth packet lib
-        pkt = packet.Packet(msg.data)
-        eth_pkt = pkt.get_protocols(ethernet.ethernet)[0]
-        dst = eth_pkt.dst
-        src = eth_pkt.src
-
-        # get received port num from packet_in msg
+    # send the packet back to the switch and we can set actions on it.
+    def send_packet_out(self, msg, actions):
+        datapath = msg.datapath
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
 
-        self.logger.info("Packet in %s %s %s %s", dpid, src, dst, in_port)
+        data = None
+        # if the packet is not in queue of queue from switch to the controller
+        if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+            data = msg.data
+        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
+                                    in_port=in_port, actions=actions, data=data)
+        datapath.send_msg(out)
 
-        if eth_pkt.ethertype == ether_types.ETH_TYPE_LLDP:
-            #ignore this packet
+    # Event: Handle packet sent from switch to the controller
+    @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
+    def _packet_in_handler(self, ev):
+        # If you hit this you might want to increase
+        # the "miss_send_length" of your switch
+        if ev.msg.msg_len < ev.msg.total_len:
+            self.logger.debug("packet truncated: only %s of %s bytes",
+                              ev.msg.msg_len, ev.msg.total_len)
+        msg = ev.msg
+        datapath = msg.datapath
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+        in_port = msg.match['in_port']
+
+        pkt = packet.Packet(msg.data)
+        eth = pkt.get_protocols(ethernet.ethernet)[0]
+
+        if eth.ethertype == ether_types.ETH_TYPE_LLDP:
+            # ignore lldp packet
             return
-        
-        # Learn particular MAC address to avoid attack next time
-        self.mac_to_port[dpid][src] = in_port
+        dl_dst = eth.dst
+        dl_src = eth.src
 
-        # if destination mac address is learned
-        # decide which port to output packet, otherwise FLOOD all ports
+        dpid = datapath.id
+        self.mac_to_port.setdefault(dpid, {})
 
-        out_port = self.mac_to_port[dpid][dst] if dst in self.mac_to_port[dpid] else ofp.OFPP_FLOOD
-        # if dst in self.mac_to_port[dpid]:
-        #     out_port = self.mac_to_port[dpid][dst]
+        self.logger.info("packet in %s %s %s %s", dpid, dl_src, dl_dst, in_port)
+
+        # # check IP Protocol and create a match for IP
+        # if eth.ethertype == ether_types.ETH_TYPE_IP:
+        #     ip = pkt.get_protocol(ipv4.ipv4)
+        #     ip_src = ip.src
+        #     ip_dst = ip.dst
+
+        #     self.logger.info("packet in %s %s %s %s %s %s", dpid, src, dst, in_port, 
+        #         ip_src, ip_dst)
+
+        # learn a mac address to avoid FLOOD next time.
+        self.mac_to_port[dpid][dl_src] = in_port
+
+        out_port = self.mac_to_port[dpid][dl_dst] if dl_dst in self.mac_to_port[dpid] else ofproto.OFPP_FLOOD
+        # if dl_dst in self.mac_to_port[dpid]:
+        #     out_port = self.mac_to_port[dpid][dl_dst]
         # else:
-        #     out_port = ofp.OFPP_FLOOD
+        #     out_port = ofproto.OFPP_FLOOD
 
-        # OFPctionOutput used with packet_out message to specify switch port you want to send packet from
-        #   Uses OFPP_FLOOD flag to indicate packet should be sent on all ports
-        # construct actions list
-        actions = [ofp_parser.OFPActionOutput(out_port)]
+        actions = [parser.OFPActionOutput(out_port)]
 
-        # install flow to avoid packet_in
-        if out_port != ofp.OFPP_FLOOD:
+        # install a flow to avoid packet_in next time
+        if out_port != ofproto.OFPP_FLOOD:
             
-            # check the IP Protocol and create IP match
-            if eth_pkt.ethertype == ether_types.ETH_TYPE_IP:
+            # check IP Protocol and create a match for IP
+            if eth.ethertype == ether_types.ETH_TYPE_IP:
                 ip = pkt.get_protocol(ipv4.ipv4)
-                src_ip = ip.src
-                dst_ip = ip.dst
+                srcip = ip.src
+                dstip = ip.dst
                 protocol = ip.proto
-
-                # IP TCP Protocol
-                if protocol == in_proto.IPPROTO_TCP:
-                    t = pkt.get_protocol(tcp.tcp)
-                    match = ofp_parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
-                                            ipv4_src=src_ip, ipv4_dst=dst_ip, ip_proto=protocol,
-                                            tcp_src=t.src_port, tcp_dst=t.dst_port,)
-
-                # IP UDP Protocol
+                
+                # Default Match of Ryu: simple_switch_13 module
+                # match = parser.OFPMatch(in_port=in_port, eth_dst=dl_dst, eth_src=dl_src)
+                
+                # If ICMP Protocol
+                if protocol == in_proto.IPPROTO_ICMP:
+                    icmp_info = pkt.get_protocol(icmp.icmp)
+                    print(icmp_info.type)
+                    match = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
+                                            ipv4_src=srcip,
+                                            ipv4_dst=dstip,
+                                            eth_src=dl_src,
+                                            eth_dst=dl_dst,
+                                            in_port=in_port,
+                                            ip_proto=protocol,
+                                            )
+    
+                #  If UDP Protocol 
                 elif protocol == in_proto.IPPROTO_UDP:
                     u = pkt.get_protocol(udp.udp)
-                    match = ofp_parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
-                                            ipv4_src=src_ip, ipv4_dst=dst_ip,ip_proto=protocol,
-                                            udp_src=u.src_port, udp_dst=u.dst_port,)
-                
-                # IP ICMP Protocol
-                elif protocol == in_proto.IPPROTO_ICMP:
-                    i = pkt.get_protocol(icmp.icmp)
-                    match = ofp_parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
-                                            ipv4_src=src_ip, ipv4_dst=dst_ip,
-                                            ip_proto=protocol,icmpv4_code=i.code,
-                                            icmpv4_type=i.type)
+                    match = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
+                                            ipv4_src=srcip,
+                                            ipv4_dst=dstip,
+                                            eth_dst=dl_dst,
+                                            eth_src=dl_src,
+                                            ip_proto=protocol,
+                                            in_port=in_port,
+                                            udp_src=u.src_port,
+                                            udp_dst=u.dst_port,
+                                            )          
 
+                # if TCP Protocol
+                elif protocol == in_proto.IPPROTO_TCP:
+                    t = pkt.get_protocol(tcp.tcp)
+                    tcp_src = t.src_port
+                    tcp_dst = t.dst_port
+                    # Custom match
+                    match = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP,
+                                            ipv4_src=srcip,
+                                            ipv4_dst=dstip,
+                                            eth_dst=dl_dst,
+                                            eth_src=dl_src,
+                                            ip_proto=protocol,
+                                            in_port=in_port,
+                                            tcp_src=tcp_src,
+                                            tcp_dst=tcp_dst,
+                                            )
 
-
-            match = ofp_parser.OFPMatch(in_port=in_port, eth_dst=dst)
-            self.add_flow(dp, 1, match, actions)
-
-        # verify if we have a valid buffer_id, if yes avoid to send both
-            # flow_mod & packet_out
-            if msg.buffer_id != ofp.OFP_NO_BUFFER:
-                    self.add_flow(dp, 1, match, actions, msg.buffer_id, idle=20, hard=100)
+                # verify if we have a valid buffer_id, if yes avoid to send both
+                # flow_mod & packet_out
+                if msg.buffer_id != ofproto.OFP_NO_BUFFER:
+                    self.add_flow(datapath, 1, match, actions, msg.buffer_id)
                     return
-            else:
-                self.add_flow(dp, 1, match, actions, idle=20, hard=100)
-
-        self.logger.debug(
-            'OFPPacketIn received: '
-            'buffer_id=%x total_len=%d '
-            'table_id=%d cookie=%d match=%s',
-            msg.buffer_id, msg.total_len,
-            msg.table_id, msg.cookie, msg.match
-        )
-
-        # data = None
-        # if msg.buffer_id == ofp.OFP_NO_BUFFER:
-        #     data = msg.data
-
-        # construct packet_out msg and send
-        out = ofp_parser.OFPPacketOut(
-            datapath = dp,
-            buffer_id = ofp.OFP_NO_BUFFER,
-            # in_port = in_port,
-            match=ofp_parser.OFPMatch(in_port=in_port),
-            actions = actions,
+                else:
+                    self.add_flow(datapath, 1, match, actions)
+                    
+        data = None
+        if msg.buffer_id == ofproto.OFP_NO_BUFFER:
             data = msg.data
-        )
 
+        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
+                                  in_port=in_port, actions=actions, data=data)
+        datapath.send_msg(out)
 
-        dp.send_msg(out)
+        
 
-def main():
-    RC = RyuController()
-    RC.__init__()
+# def main():
+#     RC = RyuController()
+#     RC.__init__()
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

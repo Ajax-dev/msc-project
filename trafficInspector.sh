@@ -1,11 +1,13 @@
 #!/bin/bash
-n=4 #number of switches
+n=4 #number of switches for linear and basic and tree
+
 red=`tput setaf 1` # setting colour variables
 green=`tput setaf 2`
 reset=`tput sgr0`
 echo "Script running..."
 for i in {1..1000}
 do
+    # start at 2 for tree
     for((j = 1; j <= n; j++))
     do
         echo "Inspection no $i at s$j"
@@ -21,10 +23,9 @@ do
         # check if there's no traffic currently
         if test -z "$packets" || test -z "$bytes" || test -z "$ipsrc" || test -z "$ipdst" 
         then
-            echo "no traffic"
             state=0
         else
-            echo "${green}Traffic flowing...${reset}"
+            #echo "${green}Traffic flowing...${reset}"
             echo "$packets" > data/packets.csv
             echo "$bytes" > data/bytes.csv
             echo "$ipsrc" > data/ipsrc.csv
@@ -43,6 +44,8 @@ do
             default_flow=$(sudo ovs-ofctl dump-flows s$j | tail -n 1) #gets the flow "action:CONTROLLER:65535" (just the port num of yours basic) sending unknown packet
             sudo ovs-ofctl del-flows s$j
             sudo ovs-ofctl add-flow s$j "$default_flow"
+        else
+            echo "${green}Clean traffic${reset}"
         fi
     done
     sleep 3

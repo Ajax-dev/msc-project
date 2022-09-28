@@ -27,7 +27,7 @@ def customNetwork():
 
     # adding controller
     # ipBase and port gotten from `sudo mn | dump`, the github link says to use 6633 but doc shows error returned -- 6653 from dump
-    network = Mininet(ipBase='10.0.0.0/4', topo=None, build=False)
+    network = Mininet(ipBase='10.0.0.0/10', topo=None, build=False)
     info('-------Add controller\n-------')
     # default transport port was 6633 pre-openflow 1.3.2, 6653 post
     c0 = network.addController('c0', controller = RemoteController, ip = '127.0.0.1', port = 6633, protocol = 'tcp')
@@ -45,6 +45,12 @@ def customNetwork():
     h2 = network.addHost('h2', cls=Host, ip = '10.0.0.2', defaultRoute = None)
     h3 = network.addHost('h3', cls=Host, ip = '10.0.0.3', defaultRoute = None)
     h4 = network.addHost('h4', cls=Host, ip = '10.0.0.4', defaultRoute = None)
+    h5 = network.addHost('h5', cls=Host, ip = '10.0.0.5', defaultRoute = None)
+    h6 = network.addHost('h6', cls=Host, ip = '10.0.0.6', defaultRoute = None)
+    h7 = network.addHost('h7', cls=Host, ip = '10.0.0.7', defaultRoute = None)
+    h8 = network.addHost('h8', cls=Host, ip = '10.0.0.8', defaultRoute = None)
+    h9 = network.addHost('h9', cls=Host, ip = '10.0.0.9', defaultRoute = None)
+    h10 = network.addHost('h10', cls=Host, ip = '10.0.0.10', defaultRoute = None)
     # h1 = network.addHost('h1', cls=Host, ip = '127.0.0.1', defaultRoute = None)
     # h2 = network.addHost('h2', cls=Host, ip = '127.0.0.2', defaultRoute = None)
     # h3 = network.addHost('h3', cls=Host, ip = '127.0.0.3', defaultRoute = None)
@@ -52,13 +58,20 @@ def customNetwork():
 
     # links for the network
     info('-------Add the links\n-------')
-    network.addLink(h1,s1)
+    network.addLink(h1,s2)
     network.addLink(h2,s2)
-    network.addLink(h3,s3)
-    network.addLink(h4,s4)
+    network.addLink(h3,s2)
+    network.addLink(h4,s3)
+    network.addLink(h5,s3)
+    network.addLink(h6,s3)
+    network.addLink(h7,s4)
+    network.addLink(h8,s4)
+    network.addLink(h9,s4)
+    network.addLink(h10,s1)
+    
     # interswitch links
-    network.addLink(s1,s3)
     network.addLink(s1,s2)
+    network.addLink(s1,s3)
     network.addLink(s1,s4)
     # network.addLink(s2,s4)
     # network.addLink(s3,s4)

@@ -17,5 +17,5 @@ dt_current = pd.read_csv('data/realtime.csv')
 result = classifier.predict(dt_current)
 
 with open('.result', 'w') as f:
-    print("INSPECTING")
+    print("\033[38;5;208mINSPECTING\033[0;0m")
     f.write(str(result[0]))
