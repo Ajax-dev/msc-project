@@ -23,6 +23,7 @@ do
         # check if there's no traffic currently
         if test -z "$packets" || test -z "$bytes" || test -z "$ipsrc" || test -z "$ipdst" 
         then
+            echo "no traffic"
             state=0
         else
             #echo "${green}Traffic flowing...${reset}"
@@ -33,20 +34,22 @@ do
 
             # python3 traffic-monitor.py
             python3 computation.py
-            python3 check-traffic-svc.py
+            python3 check-traffic.py
             state=$(awk '{print $0;}' .result)
         fi
 
         if [ $state -eq 1 ];
         then
-            echo "${red}ATTACK ON THE NETWORK AT switch$j${reset}"
-            cat data/realtime.csv
+            echo "${red}^^ATTACK ON THE NETWORK AT switch:$j^^${reset}"
+            echo "-------------------------"
+            # cat data/realtime.csv
             #
             default_flow=$(sudo ovs-ofctl dump-flows s$j | tail -n 1) #gets the flow "action:CONTROLLER:65535" (just the port num of yours basic) sending unknown packet
             sudo ovs-ofctl del-flows s$j
             sudo ovs-ofctl add-flow s$j "$default_flow"
         else
             echo "${green}^^Clean traffic^^${reset}"
+            echo "-------------------------"
         fi
     done
     sleep 3

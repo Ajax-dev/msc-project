@@ -57,9 +57,11 @@ def customNetwork():
     network.addLink(h3,s3)
     network.addLink(h4,s4)
     # interswitch links
+    network.addLink(s1,s3)
     network.addLink(s1,s2)
-    network.addLink(s2,s3)
-    network.addLink(s3,s4)
+    network.addLink(s1,s4)
+    # network.addLink(s2,s4)
+    # network.addLink(s3,s4)
 
     info('-------NETWORK STARTUP\n-------')
     network.build()
