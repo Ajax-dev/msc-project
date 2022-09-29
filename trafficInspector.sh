@@ -11,7 +11,7 @@ do
     for((j = 1; j <= n; j++))
     do
         echo "Inspection no $i at s$j"
-        # extract data
+        # extract data >> to append to the end of the file
         sudo ovs-ofctl dump-flows s$j > data/base
         grep "nw_src" data/base> data/entries.csv
         # awk '{print $0}' data/base.csv
@@ -40,12 +40,13 @@ do
         if [ $state -eq 1 ];
         then
             echo "${red}ATTACK ON THE NETWORK AT switch$j${reset}"
+            cat data/realtime.csv
             #
             default_flow=$(sudo ovs-ofctl dump-flows s$j | tail -n 1) #gets the flow "action:CONTROLLER:65535" (just the port num of yours basic) sending unknown packet
             sudo ovs-ofctl del-flows s$j
             sudo ovs-ofctl add-flow s$j "$default_flow"
         else
-            echo "${green}Clean traffic${reset}"
+            echo "${green}^^Clean traffic^^${reset}"
         fi
     done
     sleep 3

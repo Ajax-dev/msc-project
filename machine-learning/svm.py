@@ -1,19 +1,20 @@
 from datetime import datetime
 from random import random
 
+import seaborn as sn
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler as SC
 from sklearn.svm import SVC 
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import joblib
 
 class SVM():
 
+    # When running from cmd must be in the file for it to find the dataset
     def __init__(self):
         start = datetime.now()
         print("Opening dataset.\n")
-        self.dataset = pd.read_csv('train/dataset-small.csv')
+        self.dataset = pd.read_csv('../train/dataset-small.csv')
         end = datetime.now()
         print("Dataset read time: ", (end.microsecond-start.microsecond), " microseconds")
 
@@ -40,6 +41,11 @@ class SVM():
         cm = confusion_matrix(y_test, y_pred)
         print(cm)
 
+        ### Printing heatmap - seaborn
+        x_labels = ["Actual Normal", "Actual DDoS"]
+        y_labels = ["Predicted Normal", "Predicted DDoS"]
+        sn.heatmap(cm, linewidths=1,annot=True, fmt='g', xticklabels=x_labels, yticklabels=y_labels)
+
         print("     Accuracy Score        ")
         acc = accuracy_score(y_test, y_pred)
         print("Success = {0:.2f}%" .format(acc*100))
@@ -51,7 +57,7 @@ class SVM():
         print(cr)
 
         # Save the model
-        filename = 'models/finalised_model_svm.sav'
+        filename = '../models/finalised_model_svm.sav'
         joblib.dump(classifier, filename)
         
 def main():

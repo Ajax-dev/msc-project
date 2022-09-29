@@ -1,6 +1,6 @@
 from datetime import datetime
 from random import random
-from matplotlib import pyplot as plt
+import seaborn as sn
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -10,10 +10,11 @@ import joblib
 
 class KNN():
 
+    # When running from cmd must be in the file for it to find the dataset
     def __init__(self):
         start = datetime.now()
         print("Opening dataset.\n")
-        self.dataset = pd.read_csv('train/dataset-small.csv')
+        self.dataset = pd.read_csv('../train/dataset-small.csv')
         end = datetime.now()
         print("Dataset read time: ", (end.microsecond-start.microsecond), " microseconds")
 
@@ -35,10 +36,15 @@ class KNN():
         y_pred = model.predict(X_test)
 
         print("-----------Fitting complete--------------")
-        # Create a vonfusion matrix, accuracy score and then report
+        # Create a confusion matrix, accuracy score and then report
         print("     Confusion Matrix        ")
         cm = confusion_matrix(y_test, y_pred)
         print(cm)
+        
+        ### Printing heatmap - seaborn
+        x_labels = ["Actual Normal", "Actual DDoS"]
+        y_labels = ["Predicted Normal", "Predicted DDoS"]
+        sn.heatmap(cm, linewidths=1,annot=True, fmt='g', xticklabels=x_labels, yticklabels=y_labels)
 
         print("     Accuracy Score        ")
         acc = accuracy_score(y_test, y_pred)
@@ -51,7 +57,7 @@ class KNN():
         print(cr)
 
         # Save the model
-        filename = 'models/finalised_model_knn.sav'
+        filename = '../models/finalised_model_knn.sav'
         joblib.dump(classifier, filename)
         
 def main():

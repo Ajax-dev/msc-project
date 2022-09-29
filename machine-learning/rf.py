@@ -2,6 +2,7 @@ from datetime import datetime
 from random import random
 
 import pandas as pd
+import seaborn as sn
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
@@ -12,7 +13,7 @@ class RandomForest():
     def __init__(self):
         start = datetime.now()
         print("Opening dataset.\n")
-        self.dataset = pd.read_csv('train/dataset-small.csv')
+        self.dataset = pd.read_csv('../train/dataset-small.csv')
         end = datetime.now()
         print("Dataset read time: ", (end.microsecond-start.microsecond), " microseconds")
 
@@ -39,6 +40,11 @@ class RandomForest():
         cm = confusion_matrix(y_test, y_pred)
         print(cm)
 
+        ### Printing heatmap - seaborn
+        x_labels = ["Actual Normal", "Actual DDoS"]
+        y_labels = ["Predicted Normal", "Predicted DDoS"]
+        sn.heatmap(cm, linewidths=1,annot=True, fmt='g', xticklabels=x_labels, yticklabels=y_labels)
+
         print("     Accuracy Score        ")
         acc = accuracy_score(y_test, y_pred)
         print("Success = {0:.2f}%" .format(acc*100))
@@ -50,7 +56,7 @@ class RandomForest():
         print(cr)
 
         # Save the model
-        filename = 'models/finalised_model_rf.sav'
+        filename = '../models/finalised_model_rf.sav'
         joblib.dump(classifier, filename)
         
 def main():
