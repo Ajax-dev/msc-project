@@ -16,3 +16,16 @@ Datasets:
 Some additional notes:
 - Dependencies are saved in requirements.txt
 - Made use of a venv in this project 
+
+To Run:
+Start your environment with the correct requirements as laid out
+- Run all machine learning files
+- `ryu-manager controller.py`
+- New terminal window
+- `sudo python3 <any-topology>.py`
+- In the mininet line
+- `xterm <hostname i.e. h2>` and in that window `source gentraffic.sh` for as many hosts as you want
+- New terminal
+- source trafficInspector.sh
+- New xterm window
+- `sudo hping3 --flood --rand-source 10.0.0.<host to attack i.e. 1, 5, 10>`
